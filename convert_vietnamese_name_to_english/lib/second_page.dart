@@ -1,15 +1,18 @@
+// ignore_for_file: must_be_immutable, await_only_futures
+
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tiengviet/tiengviet.dart';
 
 import 'items.dart';
 
-class SecondPage extends StatelessWidget {
+class SecondPage extends StatefulWidget {
   final String ho;
   final String tenDem;
   final String ten;
-  final List<DataItems> items;
+  List<DataItems> items;
 
-  const SecondPage(
+  SecondPage(
       {super.key,
       required this.ho,
       required this.tenDem,
@@ -17,17 +20,54 @@ class SecondPage extends StatelessWidget {
       required this.items});
 
   @override
+  State<SecondPage> createState() => _SecondPageState();
+}
+
+class _SecondPageState extends State<SecondPage> {
+  @override
   Widget build(BuildContext context) {
-    void handleAddItem(String ho, tenDem, ten) {
-      final newItem = DataItems(
-          id: DateTime.now().toString(), ho: ho, tenDem: tenDem, ten: ten);
-      items.add(newItem);
+    void loadHistory() async {
+      final prefs = await SharedPreferences.getInstance();
+
+      // Fetch and decode data
+      final String itemsString = prefs.getString('localItems') ?? '';
+      List<DataItems> localItems = await DataItems.decode(itemsString);
+      // print(localItems);
+
+      if (localItems.isNotEmpty) {
+        setState(() {
+          widget.items = localItems;
+        });
+      }
     }
 
-    final String firstName = TiengViet.parse(ten);
-    final String middleName = TiengViet.parse(tenDem);
-    final String lastName = TiengViet.parse(ho);
-    handleAddItem(lastName, middleName, firstName);
+    void handleAddItem(String ho, tenDem, ten, lastName, middleName, firstName) async {
+      loadHistory();
+
+      final newItem = DataItems(
+          id: DateTime.now().toString(),
+          ho: ho,
+          tenDem: tenDem,
+          ten: ten,
+          lastName: lastName,
+          middleName: middleName,
+          firstName: firstName);
+      widget.items.add(newItem);
+
+      final prefs = await SharedPreferences.getInstance();
+
+      // remove old value
+      await prefs.remove('localItems');
+
+      // Encode and store data in SharedPreferences
+      final String encodedData = DataItems.encode(widget.items);
+      await prefs.setString('localItems', encodedData);
+    }
+
+    final String firstName = TiengViet.parse(widget.ten);
+    final String middleName = TiengViet.parse(widget.tenDem);
+    final String lastName = TiengViet.parse(widget.ho);
+    handleAddItem(widget.ho, widget.tenDem, widget.ten, lastName, middleName, firstName);
     // print(items);
 
     return Scaffold(
@@ -41,7 +81,7 @@ class SecondPage extends StatelessWidget {
             children: [
               Padding(
                 padding: const EdgeInsets.only(bottom: 10),
-                child: Text("$ho $tenDem $ten",
+                child: Text("${widget.ho} ${widget.tenDem} ${widget.ten}",
                     style: const TextStyle(fontSize: 25, color: Colors.red)),
               ),
               Container(

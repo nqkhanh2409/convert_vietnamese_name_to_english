@@ -1,26 +1,38 @@
-// ignore_for_file: camel_case_types, must_be_immutable
+// ignore_for_file: must_be_immutable, camel_case_types
 
 import 'package:flutter/material.dart';
 import 'package:confirm_dialog/confirm_dialog.dart';
-
+import 'package:shared_preferences/shared_preferences.dart';
 import 'items.dart';
 
 class HistoryPage extends StatefulWidget {
-  const HistoryPage({
+  HistoryPage({
     Key? key,
     required this.items,
   }) : super(key: key);
-  final List<DataItems> items;
+  List<DataItems> items;
 
   @override
   State<HistoryPage> createState() => _HistoryPageState();
 }
 
 class _HistoryPageState extends State<HistoryPage> {
-  void handleDeleteItem(String id) {
-    setState(() {
-      widget.items.removeWhere((item) => item.id == id);
-    });
+  List<DataItems> localItems = [];
+
+  void handleDeleteItem(String id) async {
+    widget.items.removeWhere((item) => item.id == id);
+
+    // obtain shared preferences
+    final prefs = await SharedPreferences.getInstance();
+
+    // remove old value
+    await prefs.remove('localItems');
+
+    // Encode and store data in SharedPreferences
+    final String encodedData = DataItems.encode(widget.items);
+    await prefs.setString('localItems', encodedData);
+
+    setState(() {});
   }
 
   @override
@@ -28,7 +40,7 @@ class _HistoryPageState extends State<HistoryPage> {
     return SafeArea(
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Lịch sử dịch'),
+          title: const Text('Lịch sử'),
         ),
         body: Padding(
           padding: const EdgeInsets.all(14),
@@ -41,6 +53,8 @@ class _HistoryPageState extends State<HistoryPage> {
                           fontWeight: FontWeight.w500)),
                 )
               : ListView.builder(
+                  reverse: true,
+                  shrinkWrap: true,
                   itemCount: widget.items.length,
                   itemBuilder: (context, index) {
                     return card_history(
@@ -74,24 +88,41 @@ class card_history extends StatelessWidget {
           borderRadius: BorderRadius.circular(12),
           boxShadow: const [
             BoxShadow(
-                color: Colors.black,
-                blurRadius: 2,
+                color: Colors.grey,
+                blurRadius: 1,
                 spreadRadius: 0,
-                offset: Offset(0, 2))
+                offset: Offset(0, 4))
           ]),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 20),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text("${item.ho} ${item.tenDem} ${item.ten}",
-                style: const TextStyle(
-                    fontSize: 20,
-                    color: Colors.black,
-                    fontWeight: FontWeight.w500)),
+            Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text("${item.ho} ${item.tenDem} ${item.ten}",
+                    style: const TextStyle(
+                        fontSize: 20,
+                        color: Colors.black,
+                        fontWeight: FontWeight.w500)),
+                const SizedBox(height: 5),
+                Wrap(children: [
+                  const Icon(Icons.subdirectory_arrow_right),
+                  Text("${item.firstName} ${item.middleName} ${item.lastName}",
+                      style: const TextStyle(
+                          fontSize: 20,
+                          color: Colors.black,
+                          fontWeight: FontWeight.w300)),
+                ]),
+              ],
+            ),
             InkWell(
               onTap: () async {
-                if (await confirm(context)) {
+                if (await confirm(context,
+                    title: const Text("Xóa lịch sử"),
+                    content: const Text("Xác nhận xóa?"),
+                    textCancel: const Text("Hủy"))) {
                   handleDeleteItem(item.id);
                 }
                 return;

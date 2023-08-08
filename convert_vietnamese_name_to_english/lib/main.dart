@@ -1,5 +1,6 @@
 import 'package:convert_vietnamese_name_to_english/history.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'items.dart';
 import 'second_page.dart'; // Đảm bảo bạn đã tạo file second_page.dart
 
@@ -27,7 +28,7 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  final List<DataItems> items = [];
+  List<DataItems> items = [];
 
   final TextEditingController _hoController = TextEditingController();
   final TextEditingController _tenDemController = TextEditingController();
@@ -97,6 +98,26 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  void loadHistory() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      // Fetch and decode data
+      final String itemsString = prefs.getString('localItems') ?? '';
+      List<DataItems> localItems = DataItems.decode(itemsString);
+      // print(localItems);
+
+      if (localItems.isNotEmpty) {
+        items = localItems;
+      }
+    });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    loadHistory();
+  }
+
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
@@ -130,6 +151,11 @@ class _HomePageState extends State<HomePage> {
             children: [
               TextField(
                 controller: _hoController,
+                onChanged: (value) {
+                  setState(() {
+                    _validateHo = false;
+                  });
+                },
                 decoration: InputDecoration(
                     labelText: 'Họ',
                     errorText: _validateHo ? 'Vui lòng nhập họ' : null),
@@ -139,6 +165,11 @@ class _HomePageState extends State<HomePage> {
               const SizedBox(height: 10),
               TextField(
                 controller: _tenDemController,
+                onChanged: (value) {
+                  setState(() {
+                    _validateTenDem = false;
+                  });
+                },
                 decoration: InputDecoration(
                     labelText: 'Tên đệm',
                     errorText:
@@ -149,6 +180,11 @@ class _HomePageState extends State<HomePage> {
               const SizedBox(height: 10),
               TextField(
                 controller: _tenController,
+                onChanged: (value) {
+                  setState(() {
+                    _validateTen = false;
+                  });
+                },
                 decoration: InputDecoration(
                     labelText: 'Tên',
                     errorText: _validateTen ? 'Vui lòng nhập tên' : null),
